@@ -3,6 +3,7 @@
 import argparse
 import boto
 import boto.ec2.elb
+import boto.rds
 from boto.ec2.cloudwatch import CloudWatchConnection
 from boto.ec2 import *
 import datetime
@@ -21,38 +22,26 @@ parser.add_argument('-d', '--dimension', dest='dimension',
                   default=None, help='Cloudwatch Dimension')
 parser.add_argument('-n', '--namespace', dest='namespace',
                   default='AWS/EC2', help='Cloudwatch Namespace')
-parser.add_argument('-m', '--metric', dest='metric', 
+parser.add_argument('-m', '--metric', dest='metric',
                   default='NetworkOut', help='Cloudwatch Metric')
 parser.add_argument('-s', '--statistic', dest='statistic',
                   default='Sum', help='Cloudwatch Statistic')
 parser.add_argument('-i', '--interval', dest='interval',
                   type=int,default=60, help='Interval')
 parser.add_argument('-D', '--discovery', dest='discovery',
-                  choices=['ELB'], help='Run Discovery')
+                  choices=['ELB','RDS'], help='Run Discovery')
 parser.add_argument('-l', '--elb', dest='elb',
                   help='ELB to discover instances for')
 parser.add_argument('-v', '--verbose', action='count', dest='verbose')
 
 args = parser.parse_args()
 
-# I know it could be better
-# you should know I can't do it better yet :P
-
 if args.account == 'zabbix':
     aws_key = 'YOUR_AWS_KEY_GOES_HERE'
     aws_secret = 'YOU_AWS_SECRET_GOES_HERE'
-elif args.account == '<%= @node[:zabbixaws][:account2][:name] %>':
-    aws_key = '<%= @node[:zabbixaws][:account2][:key] %>'
-    aws_secret = '<%= @node[:zabbixaws][:account2][:secret] %>'
-elif args.account == '<%= @node[:zabbixaws][:account3][:name] %>':
-    aws_key = '<%= @node[:zabbixaws][:account3][:key] %>'
-    aws_secret = '<%= @node[:zabbixaws][:account3][:secret] %>'
-elif args.account == '<%= @node[:zabbixaws][:account4][:name] %>':
-    aws_key = '<%= @node[:zabbixaws][:account4][:key] %>'
-    aws_secret = '<%= @node[:zabbixaws][:account4][:secret] %>'
-elif args.account == '<%= @node[:zabbixaws][:account5][:name] %>':
-    aws_key = '<%= @node[:zabbixaws][:account5][:key] %>'
-    aws_secret = '<%= @node[:zabbixaws][:account5][:secret] %>'
+elif args.account == '<%= @aws_account2 %>':
+    aws_key = '<%= @aws_key2 %>'
+    aws_secret = '<%= @aws_secret2 %>'
 
 if args.discovery:
   if 'ELB' in args.discovery:
@@ -65,8 +54,8 @@ if args.discovery:
       ec2_connection = boto.ec2.connection.EC2Connection(
                                           aws_access_key_id=aws_key,
                                           aws_secret_access_key=aws_secret)
-      
-      
+
+
       for elb_name in args.elb.split(':'):
         elb_data = conn.get_all_load_balancers(load_balancer_names=[elb_name])[0]
 
@@ -91,6 +80,18 @@ if args.discovery:
         )
 
     print json.dumps(elbRetData, indent=4)
+  elif 'RDS' in args.discovery:
+    conn = boto.rds.connect_to_region(args.region,
+                                          aws_access_key_id=aws_key,
+                                          aws_secret_access_key=aws_secret)
+
+    rdsRetData = { "data": [ ] }
+    rdss = conn.get_all_dbinstances()
+    for rds in rdss:
+      rdsRetData['data'].append(
+      { '{#RDSID}': rds.id }
+      )
+    print json.dumps(rdsRetData, indent=4)
 else:
   end_time = datetime.datetime.now()
 
@@ -104,7 +105,8 @@ else:
   else:
     debug=0
 
-  cloudwatch = CloudWatchConnection(aws_access_key_id=aws_key,
+  cloudwatch = boto.ec2.cloudwatch.connect_to_region(args.region,
+                                    aws_access_key_id=aws_key,
                                     aws_secret_access_key=aws_secret,
                                     is_secure=True,
                                     debug=debug)
@@ -113,7 +115,7 @@ else:
 
   if args.dimension:
       dimension = {}
-      dimensions = args.dimension.split('=') 
+      dimensions = args.dimension.split('=')
       dimension[dimensions[0]] = dimensions[1]
       cloudwatch_result = cloudwatch.get_metric_statistics(args.interval, start_time, end_time, args.metric, args.namespace, args.statistic, dimensions=dimension)
       if args.verbose:
