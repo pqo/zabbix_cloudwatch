@@ -1,11 +1,8 @@
-#Zabbix CloudWatch and ELB
-
-Zabbix template for AWS CloudWatch monitoring.
+#Zabbix CloudWatch monitoring for AWS with ELB and RDS low-level discovery
 
 CloudWatch template comes with some default items including AutoScaling, RDS, and ELB.
 
 It supports low-level discovery of AWS EC2 ELB and RDS instances and will assign items/triggers to each.
-
 
 ## Install
 This is installed on any host with a running Zabbix agent from which you would like to access AWS Cloudwatch API. Typically you'd run this on a Zabbix Server or Proxy.
