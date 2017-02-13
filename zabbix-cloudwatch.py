@@ -37,8 +37,8 @@ parser.add_argument('-v', '--verbose', action='count', dest='verbose')
 args = parser.parse_args()
 
 if args.account == 'zabbix':
-    aws_key = 'YOUR_AWS_KEY_GOES_HERE'
-    aws_secret = 'YOU_AWS_SECRET_GOES_HERE'
+    aws_key = '<%= @aws_key %>' #YOUR_AWS_KEY_GOES_HERE
+    aws_secret = '<%= @aws_secret %>' #YOUR_AWS_SECRET_GOES_HERE
 elif args.account == '<%= @aws_account2 %>':
     aws_key = '<%= @aws_key2 %>'
     aws_secret = '<%= @aws_secret2 %>'
@@ -127,7 +127,7 @@ else:
     cloudwatch_result = cloudwatch_result[0]
     cloudwatch_result = float(cloudwatch_result[args.statistic])
   else:
-    # Assuming value is 0 if AWS returned empty list
-    cloudwatch_result = 0.0
+    # Return -1 if AWS returned empty list
+    cloudwatch_result = -1
 
   print cloudwatch_result
